@@ -1,0 +1,53 @@
+stores:
+
+  filesystem:
+    backup_local: /backup/local
+    backup_usb: /backup/usb
+
+  ssh:
+    example1:
+      hostname: host1.example.com
+      username: username
+      port: 22
+      ssh_key: ~/.ssh/example
+
+    example2:
+      hostname: host2.example.com
+      username: lucy
+      ssh_key: ~/.ssh/lucy@host2
+
+
+archives:
+  laptop:
+    paths:
+      - ~/Desktop
+      - ~/Documents
+      - ~/Pictures
+      - ~/bin
+      - ~/src
+    exclude:
+      - "**/venv"
+      - "**/node_modules"
+
+
+targets:
+  - archive: laptop
+    store: backup_local
+    encryption: keyfile-blake2
+    prune:
+      keep_daily: 1
+      keep_weekly: 1
+      keep_monthly: 1
+      keep_yearly: 1
+    compact: true
+    rclone_upload_path: 'b2-borg-archives:'
+
+  - archive: laptop
+    repository: backup_usb
+    encryption: keyfile-blake2
+    prune:
+      keep_daily: 7
+      keep_weekly: 3
+      keep_monthly: 6
+      keep_yearly: 2
+    compact: true
