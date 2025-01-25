@@ -13,6 +13,9 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
+// configPath is a helper function to determine the applications config+data path
+// TODO: Use this everywhere instead of rewriting it (e.g. config.go)
+// TODO: Separate config from data as per XDG spec
 func configPath() string {
 	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfigHome == "" {
@@ -25,94 +28,105 @@ func configPath() string {
 	return path.Join(xdgConfigHome, "borgdrone")
 }
 
-type CommonArguments struct {
-	ConfigFile string
-}
+// All subcommands are passed a map of valid targets read from the config file
+type TargetMap map[string]config.Target
 
+// RunnableCommand is the interface which all subcommands implement.
+// This allows all subcommands to have a .Run() method with a consistent signature.
+// Subcommand-specific args are passed into the real command function by their respective implementations
 type RunnableCommand interface {
-	Run(cfg config.Config) int
+	Run(targets TargetMap) int
 }
 
 // list-targets
+// ----------------------------------------------------------------------------
 type ListTargetsCmd struct {
 	Format string `arg:"-F,--format" default:"text"`
 }
 
-func (cmd ListTargetsCmd) Run(cfg config.Config) int {
+func (cmd ListTargetsCmd) Run(targets TargetMap) int {
 	commands.ListTargets(cmd.Format)
 	return 0
 }
 
 // initialise
+// ----------------------------------------------------------------------------
 type InitialiseCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd InitialiseCmd) Run(cfg config.Config) int {
+func (cmd InitialiseCmd) Run(targets TargetMap) int {
 	commands.Initialise(cmd.Target)
 	return 0
 }
 
 // info
+// ----------------------------------------------------------------------------
 type InfoCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd InfoCmd) Run(cfg config.Config) int {
+func (cmd InfoCmd) Run(targets TargetMap) int {
 	commands.Info(cmd.Target)
 	return 0
 }
 
 // list
+// ----------------------------------------------------------------------------
 type ListCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd ListCmd) Run(cfg config.Config) int {
+func (cmd ListCmd) Run(targets TargetMap) int {
 	commands.List(cmd.Target)
 	return 0
 }
 
 // create
+// ----------------------------------------------------------------------------
 type CreateCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd CreateCmd) Run(cfg config.Config) int {
+func (cmd CreateCmd) Run(targets TargetMap) int {
 	commands.Create(cmd.Target)
 	return 0
 }
 
 // export-key
+// ----------------------------------------------------------------------------
 type ExportKeyCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd ExportKeyCmd) Run(cfg config.Config) int {
+func (cmd ExportKeyCmd) Run(targets TargetMap) int {
 	commands.ExportKey(cmd.Target)
 	return 0
 }
 
 // import-key
+// ----------------------------------------------------------------------------
 type ImportKeyCmd struct {
 	Target       types.BorgTarget `arg:"required,positional"`
 	Keyfile      string           `arg:"required"`
 	PasswordFile string           `arg:"--password-file"`
 }
 
-func (cmd ImportKeyCmd) Run(cfg config.Config) int {
+func (cmd ImportKeyCmd) Run(targets TargetMap) int {
 	commands.ImportKey(cmd.Target, cmd.Keyfile, cmd.PasswordFile)
 	return 0
 }
 
 // clean
+// ----------------------------------------------------------------------------
 type CleanCmd struct{}
 
-func (cmd CleanCmd) Run(cfg config.Config) int {
+func (cmd CleanCmd) Run(targets TargetMap) int {
 	commands.Clean()
 	return 0
 }
 
+// Arguments struct defines the CLI Interface
 type Arguments struct {
 	ListTargets *ListTargetsCmd `arg:"subcommand:list-targets"`
 	Initialise  *InitialiseCmd  `arg:"subcommand:init"`
@@ -126,7 +140,8 @@ type Arguments struct {
 	ConfigFile string `arg:"-c,--config-file"`
 }
 
-func (args *Arguments) RunSubcommand(cfg config.Config) int {
+// RunSubCommand method finds the CLI subcommand specified and calls it's Run() method
+func (args *Arguments) RunSubcommand(targets TargetMap) int {
 	subCommands := []RunnableCommand{
 		args.ListTargets,
 		args.Initialise,
@@ -139,12 +154,13 @@ func (args *Arguments) RunSubcommand(cfg config.Config) int {
 	}
 	for _, cmd := range subCommands {
 		if !reflect.ValueOf(cmd).IsNil() {
-			return cmd.Run(cfg)
+			return cmd.Run(targets)
 		}
 	}
 	return 1
 }
 
+// ParseArgs is the main function used to initiate CLI argument parsing
 func ParseArgs() *Arguments {
 	var args Arguments
 	arg.MustParse(&args)

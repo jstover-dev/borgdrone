@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	args := cmdargs.ParseArgs()
 	config.WriteDefaultConfigFile(args.ConfigFile)
 

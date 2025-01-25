@@ -4,11 +4,14 @@ import (
 	"fmt"
 
 	"codeberg.org/jstover/borgdrone/internal/types"
+	"codeberg.org/jstover/borgdrone/internal/borg"
 )
 
 func ListTargets(format string) {
 	fmt.Println("Running ListTargets")
 	fmt.Printf("Format = %s\n", format)
+
+	borg.Run([]string{})
 }
 
 func Initialise(target types.BorgTarget) {
