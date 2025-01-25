@@ -28,14 +28,11 @@ func configPath() string {
 	return path.Join(xdgConfigHome, "borgdrone")
 }
 
-// All subcommands are passed a map of valid targets read from the config file
-type TargetMap map[string]config.Target
-
 // RunnableCommand is the interface which all subcommands implement.
 // This allows all subcommands to have a .Run() method with a consistent signature.
 // Subcommand-specific args are passed into the real command function by their respective implementations
 type RunnableCommand interface {
-	Run(targets TargetMap) int
+	Run(cfg config.Config) int
 }
 
 // list-targets
@@ -44,8 +41,8 @@ type ListTargetsCmd struct {
 	Format string `arg:"-F,--format" default:"text"`
 }
 
-func (cmd ListTargetsCmd) Run(targets TargetMap) int {
-	commands.ListTargets(cmd.Format)
+func (cmd ListTargetsCmd) Run(cfg config.Config) int {
+	commands.ListTargets(cfg, cmd.Format)
 	return 0
 }
 
@@ -55,7 +52,7 @@ type InitialiseCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd InitialiseCmd) Run(targets TargetMap) int {
+func (cmd InitialiseCmd) Run(cfg config.Config) int {
 	commands.Initialise(cmd.Target)
 	return 0
 }
@@ -66,7 +63,7 @@ type InfoCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd InfoCmd) Run(targets TargetMap) int {
+func (cmd InfoCmd) Run(cfg config.Config) int {
 	commands.Info(cmd.Target)
 	return 0
 }
@@ -77,7 +74,7 @@ type ListCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd ListCmd) Run(targets TargetMap) int {
+func (cmd ListCmd) Run(cfg config.Config) int {
 	commands.List(cmd.Target)
 	return 0
 }
@@ -88,7 +85,7 @@ type CreateCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd CreateCmd) Run(targets TargetMap) int {
+func (cmd CreateCmd) Run(cfg config.Config) int {
 	commands.Create(cmd.Target)
 	return 0
 }
@@ -99,7 +96,7 @@ type ExportKeyCmd struct {
 	Target types.BorgTarget `arg:"required,positional"`
 }
 
-func (cmd ExportKeyCmd) Run(targets TargetMap) int {
+func (cmd ExportKeyCmd) Run(cfg config.Config) int {
 	commands.ExportKey(cmd.Target)
 	return 0
 }
@@ -112,7 +109,7 @@ type ImportKeyCmd struct {
 	PasswordFile string           `arg:"--password-file"`
 }
 
-func (cmd ImportKeyCmd) Run(targets TargetMap) int {
+func (cmd ImportKeyCmd) Run(cfg config.Config) int {
 	commands.ImportKey(cmd.Target, cmd.Keyfile, cmd.PasswordFile)
 	return 0
 }
@@ -121,7 +118,7 @@ func (cmd ImportKeyCmd) Run(targets TargetMap) int {
 // ----------------------------------------------------------------------------
 type CleanCmd struct{}
 
-func (cmd CleanCmd) Run(targets TargetMap) int {
+func (cmd CleanCmd) Run(cfg config.Config) int {
 	commands.Clean()
 	return 0
 }
@@ -141,7 +138,7 @@ type Arguments struct {
 }
 
 // RunSubCommand method finds the CLI subcommand specified and calls it's Run() method
-func (args *Arguments) RunSubcommand(targets TargetMap) int {
+func (args *Arguments) RunSubcommand(cfg config.Config) int {
 	subCommands := []RunnableCommand{
 		args.ListTargets,
 		args.Initialise,
@@ -154,7 +151,7 @@ func (args *Arguments) RunSubcommand(targets TargetMap) int {
 	}
 	for _, cmd := range subCommands {
 		if !reflect.ValueOf(cmd).IsNil() {
-			return cmd.Run(targets)
+			return cmd.Run(cfg)
 		}
 	}
 	return 1

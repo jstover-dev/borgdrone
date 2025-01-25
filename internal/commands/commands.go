@@ -1,22 +1,44 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 
-	"codeberg.org/jstover/borgdrone/internal/types"
 	"codeberg.org/jstover/borgdrone/internal/borg"
+	"codeberg.org/jstover/borgdrone/internal/config"
+	"codeberg.org/jstover/borgdrone/internal/types"
+	"gopkg.in/yaml.v3"
 )
 
-func ListTargets(format string) {
+func ListTargets(cfg config.Config, format string) {
 	fmt.Println("Running ListTargets")
 	fmt.Printf("Format = %s\n", format)
 
-	borg.Run([]string{})
+	switch format {
+	case "json":
+		data, err := json.MarshalIndent(cfg.TargetMap, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(data))
+
+	case "yaml":
+		data, err := yaml.Marshal(cfg.TargetMap)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(data))
+
+	case "text":
+	}
+
 }
 
 func Initialise(target types.BorgTarget) {
 	fmt.Println("Runnning Initialise")
 	fmt.Printf("Target = %+v\n", target)
+	borg.Run([]string{})
 }
 
 func Info(target types.BorgTarget) {

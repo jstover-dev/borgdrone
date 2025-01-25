@@ -24,39 +24,46 @@ const (
 	SSHStore   StoreType = "SSH"
 )
 
+// SshStore contains values needed for remote borg repositories
+type SshStore struct {
+	Hostname string `json:",omitempty" yaml:",omitempty"`
+	Username string `json:",omitempty" yaml:",omitempty"`
+	Port     int    `json:",omitempty" yaml:",omitempty"`
+	Path     string `json:",omitempty" yaml:",omitempty"`
+	SshKey   string `json:",omitempty" yaml:",omitempty"`
+}
+
+// Archive contains values needed for locating files to backup
+type Archive struct {
+	Include []string `json:",omitempty" yaml:",omitempty"`
+	Exclude []string `json:",omitempty" yaml:",omitempty"`
+}
+
+// PruneOptions contains options for pruning old versions of borg backups
+type PruneOptions struct {
+	KeepDaily   int `json:",omitempty" yaml:",omitempty"`
+	KeepWeekly  int `json:",omitempty" yaml:",omitempty"`
+	KeepMonthly int `json:",omitempty" yaml:",omitempty"`
+	KeepYearly  int `json:",omitempty" yaml:",omitempty"`
+}
+
 // Target is a struct used to hold information about a single borg target
 // Store and Archive are read from the separate YAML section and copied here
 // This avoids the need to reference into the YAML parser struct
 type Target struct {
-	StoreName string
-	StoreType StoreType
+	StoreName string    `json:"-" yaml:"-"`
+	StoreType StoreType `json:"-" yaml:"-"`
 	Store     struct {
-		Local string
-		SSH   struct {
-			Hostname string
-			Username string
-			Port     int
-			Path     string
-			SshKey   string
-		}
+		Local string    `json:",omitempty" yaml:",omitempty"`
+		SSH   *SshStore `json:",omitempty" yaml:",omitempty"`
 	}
-
-	ArchiveName string
-	Archive     struct {
-		Include []string
-		Exclude []string
-	}
-
-	Encryption   string
-	Compact      bool
-	OneFileSytem bool
-	Prune        struct {
-		KeepDaily   int
-		KeepWeekly  int
-		KeepMonthly int
-		KeepYearly  int
-	}
-	RcloneUploadPath string
+	ArchiveName      string `json:"-" yaml:"-"`
+	Archive          Archive
+	Encryption       string
+	Compact          bool
+	OneFileSytem     bool
+	Prune            PruneOptions
+	RcloneUploadPath string `json:",omitempty" yaml:",omitempty"`
 }
 
 // GetName Returns a human-readable label for this target
@@ -149,8 +156,8 @@ func (t Target) GetEnvironment() borg.Environment {
 	return env
 }
 
-// Config is the struct used for parsing the YAML configuration file
-type Config struct {
+// ConfigYaml is the struct used for parsing the YAML configuration file
+type ConfigYaml struct {
 	Stores struct {
 		Filesystem map[string]string
 
@@ -163,10 +170,7 @@ type Config struct {
 		}
 	}
 
-	Archives map[string]struct {
-		Include []string
-		Exclude []string
-	}
+	Archives map[string]Archive
 
 	Targets []struct {
 		Archive      string
@@ -185,21 +189,16 @@ type Config struct {
 }
 
 // GetTarget reads a target configuration by its positional index and returns a Target object
-func (cfg Config) GetTarget(idx int) Target {
+func (cfg ConfigYaml) GetTarget(idx int) Target {
 	target := cfg.Targets[idx]
 	t := Target{
-		StoreName:    target.Store,
-		ArchiveName:  target.Archive,
-		Archive:      cfg.Archives[target.Archive],
-		Encryption:   target.Encryption,
-		Compact:      target.Compact,
-		OneFileSytem: target.OneFileSytem,
-		Prune: struct {
-			KeepDaily   int
-			KeepWeekly  int
-			KeepMonthly int
-			KeepYearly  int
-		}(target.Prune),
+		StoreName:        target.Store,
+		ArchiveName:      target.Archive,
+		Archive:          cfg.Archives[target.Archive],
+		Encryption:       target.Encryption,
+		Compact:          target.Compact,
+		OneFileSytem:     target.OneFileSytem,
+		Prune:            PruneOptions(target.Prune),
 		RcloneUploadPath: target.RcloneUploadPath,
 	}
 	// Populate the appropriate Store and set StoreType
@@ -208,26 +207,41 @@ func (cfg Config) GetTarget(idx int) Target {
 		t.Store.Local = store
 	} else if store, ok := cfg.Stores.Ssh[target.Store]; ok {
 		t.StoreType = SSHStore
-		t.Store.SSH.Hostname = store.Hostname
-		t.Store.SSH.Username = store.Username
-		t.Store.SSH.Port = store.Port
-		t.Store.SSH.SshKey = store.SshKey
+		t.Store.SSH = &SshStore{
+			Hostname: store.Hostname,
+			Username: store.Username,
+			Port:     store.Port,
+			SshKey:   store.SshKey,
+		}
+	}
+	// Ensure uninitialised slices are not nil. Work around for json serialising as null
+	if len(t.Archive.Include) == 0 {
+		t.Archive.Include = []string{}
+	}
+	if len(t.Archive.Exclude) == 0 {
+		t.Archive.Exclude = []string{}
 	}
 	return t
+}
+
+// Config is the main configuration struct which is passed into subcommands
+// Currently only contains the map of valid targets, but could be used for global program configuration
+type Config struct {
+	TargetMap map[string]Target
 }
 
 //go:embed default.yml
 var defaultConfigData []byte
 
-func ReadConfigFile(path string) (map[string]Target, error) {
-	var cfg Config
+func ReadConfigFile(path string) (Config, error) {
+	var cfg ConfigYaml
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return Config{}, err
 	}
 	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
-		return nil, err
+		return Config{}, err
 	}
 
 	localStores := slices.Collect(maps.Keys(cfg.Stores.Filesystem))
@@ -238,7 +252,7 @@ func ReadConfigFile(path string) (map[string]Target, error) {
 	storeKeys := make(map[string]struct{})
 	for _, name := range allStores {
 		if _, has := storeKeys[name]; has {
-			return nil, fmt.Errorf("Invalid configuration: Duplicate Store name '%s' (%s)", name, path)
+			return Config{}, fmt.Errorf("Invalid configuration: Duplicate Store name '%s' (%s)", name, path)
 		}
 		storeKeys[name] = struct{}{}
 	}
@@ -248,12 +262,12 @@ func ReadConfigFile(path string) (map[string]Target, error) {
 
 		// Check archive references
 		if _, ok := cfg.Archives[target.Archive]; !ok {
-			return nil, fmt.Errorf("Invalid configuration: Invalid archive reference '%s' (%s)", target.Archive, path)
+			return Config{}, fmt.Errorf("Invalid configuration: Invalid archive reference '%s' (%s)", target.Archive, path)
 		}
 
 		// Check store references
 		if !slices.Contains(allStores, target.Store) {
-			return nil, fmt.Errorf("Invalid configuration: Invalid store reference '%s' (%s)", target.Store, path)
+			return Config{}, fmt.Errorf("Invalid configuration: Invalid store reference '%s' (%s)", target.Store, path)
 		}
 	}
 
@@ -265,7 +279,7 @@ func ReadConfigFile(path string) (map[string]Target, error) {
 		fmt.Println(t)
 	}
 
-	return targets, nil
+	return Config{TargetMap: targets}, nil
 }
 
 func WriteDefaultConfigFile(path string) int {
