@@ -6,27 +6,12 @@ import (
 	"path"
 	"reflect"
 
+	"codeberg.org/jstover/borgdrone/internal/bdTypes"
 	"codeberg.org/jstover/borgdrone/internal/commands"
 	"codeberg.org/jstover/borgdrone/internal/config"
-	"codeberg.org/jstover/borgdrone/internal/types"
 
 	"github.com/alexflint/go-arg"
 )
-
-// configPath is a helper function to determine the applications config+data path
-// TODO: Use this everywhere instead of rewriting it (e.g. config.go)
-// TODO: Separate config from data as per XDG spec
-func configPath() string {
-	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
-	if xdgConfigHome == "" {
-		userHome, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatal(err)
-		}
-		xdgConfigHome = path.Join(userHome, ".config")
-	}
-	return path.Join(xdgConfigHome, "borgdrone")
-}
 
 // RunnableCommand is the interface which all subcommands implement.
 // This allows all subcommands to have a .Run() method with a consistent signature.
@@ -49,18 +34,18 @@ func (cmd ListTargetsCmd) Run(cfg config.Config) int {
 // initialise
 // ----------------------------------------------------------------------------
 type InitialiseCmd struct {
-	Target types.BorgTarget `arg:"required,positional"`
+	Target bdTypes.BorgTarget `arg:"required,positional"`
 }
 
 func (cmd InitialiseCmd) Run(cfg config.Config) int {
-	commands.Initialise(cmd.Target)
+	commands.Initialise(cfg, cmd.Target)
 	return 0
 }
 
 // info
 // ----------------------------------------------------------------------------
 type InfoCmd struct {
-	Target types.BorgTarget `arg:"required,positional"`
+	Target bdTypes.BorgTarget `arg:"required,positional"`
 }
 
 func (cmd InfoCmd) Run(cfg config.Config) int {
@@ -71,7 +56,7 @@ func (cmd InfoCmd) Run(cfg config.Config) int {
 // list
 // ----------------------------------------------------------------------------
 type ListCmd struct {
-	Target types.BorgTarget `arg:"required,positional"`
+	Target bdTypes.BorgTarget `arg:"required,positional"`
 }
 
 func (cmd ListCmd) Run(cfg config.Config) int {
@@ -82,7 +67,7 @@ func (cmd ListCmd) Run(cfg config.Config) int {
 // create
 // ----------------------------------------------------------------------------
 type CreateCmd struct {
-	Target types.BorgTarget `arg:"required,positional"`
+	Target bdTypes.BorgTarget `arg:"required,positional"`
 }
 
 func (cmd CreateCmd) Run(cfg config.Config) int {
@@ -93,7 +78,7 @@ func (cmd CreateCmd) Run(cfg config.Config) int {
 // export-key
 // ----------------------------------------------------------------------------
 type ExportKeyCmd struct {
-	Target types.BorgTarget `arg:"required,positional"`
+	Target bdTypes.BorgTarget `arg:"required,positional"`
 }
 
 func (cmd ExportKeyCmd) Run(cfg config.Config) int {
@@ -104,9 +89,9 @@ func (cmd ExportKeyCmd) Run(cfg config.Config) int {
 // import-key
 // ----------------------------------------------------------------------------
 type ImportKeyCmd struct {
-	Target       types.BorgTarget `arg:"required,positional"`
-	Keyfile      string           `arg:"required"`
-	PasswordFile string           `arg:"--password-file"`
+	Target       bdTypes.BorgTarget `arg:"required,positional"`
+	Keyfile      string             `arg:"required"`
+	PasswordFile string             `arg:"--password-file"`
 }
 
 func (cmd ImportKeyCmd) Run(cfg config.Config) int {

@@ -1,13 +1,13 @@
-package types
+package bdTypes
 
 import (
-	"strings"
 	"errors"
+	"strings"
 )
 
 type BorgTarget struct {
-	archive string
-	repository string
+	Archive    string
+	Repository string
 }
 
 func (t *BorgTarget) UnmarshalText(b []byte) error {
@@ -15,10 +15,8 @@ func (t *BorgTarget) UnmarshalText(b []byte) error {
 	if len(parts) != 2 {
 		return errors.New("does not match ARCHIVE:[REPO] format")
 	} else {
-		t.archive = parts[0]
-		t.repository = parts[1]
+		t.Archive = parts[0]
+		t.Repository = parts[1]
 	}
 	return nil
 }
-
-

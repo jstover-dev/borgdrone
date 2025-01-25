@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
+	"codeberg.org/jstover/borgdrone/internal/bdTypes"
 	"codeberg.org/jstover/borgdrone/internal/borg"
 	"codeberg.org/jstover/borgdrone/internal/config"
-	"codeberg.org/jstover/borgdrone/internal/types"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,33 +35,36 @@ func ListTargets(cfg config.Config, format string) {
 
 }
 
-func Initialise(target types.BorgTarget) {
+func Initialise(cfg config.Config, targetSpec bdTypes.BorgTarget) {
 	fmt.Println("Runnning Initialise")
-	fmt.Printf("Target = %+v\n", target)
+	fmt.Printf("TargetSpec = %+v\n", targetSpec)
+	for _, target := range cfg.GetTargets(targetSpec) {
+		fmt.Println("Running init on ", target.GetName())
+	}
 	borg.Run([]string{})
 }
 
-func Info(target types.BorgTarget) {
+func Info(target bdTypes.BorgTarget) {
 	fmt.Println("Running Info")
 	fmt.Printf("Target = %+v\n", target)
 }
 
-func List(target types.BorgTarget) {
+func List(target bdTypes.BorgTarget) {
 	fmt.Println("Running List")
 	fmt.Printf("Target = %+v\n", target)
 }
 
-func Create(target types.BorgTarget) {
+func Create(target bdTypes.BorgTarget) {
 	fmt.Println("Running Create")
 	fmt.Printf("Target = %+v\n", target)
 }
 
-func ExportKey(target types.BorgTarget) {
+func ExportKey(target bdTypes.BorgTarget) {
 	fmt.Println("Running ExportKey")
 	fmt.Printf("Target = %+v\n", target)
 }
 
-func ImportKey(target types.BorgTarget, keyFile string, passwordFile string) {
+func ImportKey(target bdTypes.BorgTarget, keyFile string, passwordFile string) {
 	fmt.Println("Running ImportKey")
 	fmt.Printf("Target = %+v\n", target)
 	fmt.Printf("Key File = %s\n", keyFile)
