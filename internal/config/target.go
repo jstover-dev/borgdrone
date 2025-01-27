@@ -2,12 +2,12 @@ package config
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"strings"
-
-	"codeberg.org/jstover/borgdrone/internal/borg"
 )
 
 type StoreType string
@@ -103,7 +103,7 @@ func (t Target) GetBorgRepositoryPath() string {
 	switch t.StoreType {
 
 	case LocalStore:
-		return path.Join(t.Store.Local + t.ArchiveName)
+		return path.Join(t.Store.Local, t.ArchiveName)
 
 	case SSHStore:
 		store := t.Store.SSH
@@ -128,20 +128,47 @@ func (t Target) GetBorgRepositoryPath() string {
 	}
 }
 
-// GetEnvironment returns borg.Environment object used to set the subprocess environment variables
-func (t Target) GetEnvironment() borg.Environment {
-	env := borg.Environment{
-		PassCommand:             "cat " + t.GetPasswordFile(),
-		RelocatedRepoAccessIsOk: true,
-		Repo:                    t.GetBorgRepositoryPath(),
-		Rsh:                     "",
+// GetEnvironment
+func (t Target) GetEnvironment() []string {
+	e := []string{
+		"BORG_RELOCATED_REPO_ACCESS_IS_OK=yes",
 	}
+	e = append(e, fmt.Sprintf("BORG_PASSCOMMAND=cat %s", t.GetPasswordFile()))
+	e = append(e, fmt.Sprintf("BORG_REPO=%s", t.GetBorgRepositoryPath()))
+
 	if t.StoreType == SSHStore {
-		rsh := "ssh -o VisualHostKey=no"
+		rshOptions := []string{"-o VisualHostKey=no"}
 		if t.Store.SSH.SshKey != "" {
-			rsh += " -i " + t.Store.SSH.SshKey
+			rshOptions = append(rshOptions, "-i "+t.Store.SSH.SshKey)
 		}
-		env.Rsh = rsh
+		e = append(e, fmt.Sprintf("BORG_RSH=ssh %s", strings.Join(rshOptions, " ")))
 	}
-	return env
+	return e
+}
+
+// CreatePasswordFile
+func (t Target) CreatePasswordFile() {
+	os.MkdirAll(t.GetConfigPath(), 0700)
+	file, err := os.OpenFile(t.GetPasswordFile(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if errors.Is(err, os.ErrExist) {
+		return
+	} else if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString("SECRETPASSWORD")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Created " + t.GetPasswordFile())
+}
+
+// MarkInitialised
+func (t Target) MarkInitialised() {
+	_, err := os.Create(path.Join(t.GetConfigPath(), ".initialised"))
+	if err != nil {
+		log.Fatal(err)
+	}
 }

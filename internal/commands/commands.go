@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"codeberg.org/jstover/borgdrone/internal/bdTypes"
 	"codeberg.org/jstover/borgdrone/internal/borg"
@@ -31,17 +32,31 @@ func ListTargets(cfg config.Config, format string) {
 		fmt.Println(string(data))
 
 	case "text":
+		for name, target := range cfg.TargetMap {
+			fmt.Println(name)
+			fmt.Printf("Include     | %s\n", strings.Join(target.Archive.Include, ", "))
+			if len(target.Archive.Exclude) > 0 {
+				fmt.Printf("Exclude     | %s\n", strings.Join(target.Archive.Exclude, ", "))
+			}
+			fmt.Printf("Repository  | %s [%s]\n", target.StoreName, target.GetBorgRepositoryPath())
+			fmt.Println()
+		}
 	}
-
 }
 
 func Initialise(cfg config.Config, targetSpec bdTypes.BorgTarget) {
 	fmt.Println("Runnning Initialise")
 	fmt.Printf("TargetSpec = %+v\n", targetSpec)
 	for _, target := range cfg.GetTargets(targetSpec) {
-		fmt.Println("Running init on ", target.GetName())
+		if target.IsInitialised() {
+			fmt.Println(target.GetName(), "already initialised")
+			continue
+		}
+		fmt.Println("Initialising", target.GetName())
+		target.CreatePasswordFile()
+		borg.Run([]string{"init", "--encryption", target.Encryption}, target.GetEnvironment())
+		target.MarkInitialised()
 	}
-	borg.Run([]string{})
 }
 
 func Info(target bdTypes.BorgTarget) {

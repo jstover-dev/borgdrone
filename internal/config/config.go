@@ -63,6 +63,9 @@ func (cfg ConfigYaml) GetTarget(idx int) Target {
 		Prune:            PruneOptions(target.Prune),
 		RcloneUploadPath: target.RcloneUploadPath,
 	}
+	if t.Encryption == "" {
+		t.Encryption = "keyfile-blake2"
+	}
 
 	// Populate the appropriate Store and set StoreType
 	if store, ok := cfg.Stores.Filesystem[t.StoreName]; ok {
@@ -75,6 +78,9 @@ func (cfg ConfigYaml) GetTarget(idx int) Target {
 			Username: store.Username,
 			Port:     store.Port,
 			SshKey:   store.SshKey,
+		}
+		if t.Store.SSH.Port == 0 {
+			t.Store.SSH.Port = 22
 		}
 	}
 
@@ -138,6 +144,14 @@ func ReadConfigFile(path string) (Config, error) {
 	// Validate Targets
 	for _, target := range cfg.Targets {
 
+		// Check required values are present
+		if target.Archive == "" {
+			return Config{}, fmt.Errorf("Invalid Configuration: Target missing value: archive")
+		}
+		if target.Store == "" {
+			return Config{}, fmt.Errorf("Invalid Configuration: Target missing value: store")
+		}
+
 		// Check archive references
 		if _, ok := cfg.Archives[target.Archive]; !ok {
 			return Config{}, fmt.Errorf("Invalid configuration: Invalid archive reference '%s' (%s)", target.Archive, path)
@@ -146,6 +160,13 @@ func ReadConfigFile(path string) (Config, error) {
 		// Check store references
 		if !slices.Contains(allStores, target.Store) {
 			return Config{}, fmt.Errorf("Invalid configuration: Invalid store reference '%s' (%s)", target.Store, path)
+		}
+	}
+
+	// Validate SSH Stores
+	for name, store := range cfg.Stores.Ssh {
+		if store.Hostname == "" {
+			return Config{}, fmt.Errorf("Invalid Configuration: SSH Store '%s' missing required value: hostname", name)
 		}
 	}
 

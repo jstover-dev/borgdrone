@@ -2,39 +2,43 @@ package borg
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 
 	"github.com/go-cmd/cmd"
 )
 
-type Environment struct {
-	PassCommand             string
-	RelocatedRepoAccessIsOk bool
-	Repo                    string
-	Rsh                     string
+func assertExists() {
+	_, err := exec.LookPath("borg")
+	if err != nil {
+		log.Fatal("borg command was not found or is not installed.")
+	}
 }
 
-func Run(args []string) {
+func Run(args []string, env []string) {
+	assertExists()
 	cmdOptions := cmd.Options{
 		Buffered:  false,
 		Streaming: true,
 	}
-	envCmd := cmd.NewCmdOptions(cmdOptions, "./counter", args...)
+	command := cmd.NewCmdOptions(cmdOptions, "borg", args...)
+	command.Env = env
 
 	doneChan := make(chan struct{})
 	go func() {
 		defer close(doneChan)
-		for envCmd.Stdout != nil || envCmd.Stderr != nil {
+		for command.Stdout != nil || command.Stderr != nil {
 			select {
-			case line, open := <-envCmd.Stdout:
+			case line, open := <-command.Stdout:
 				if !open {
-					envCmd.Stdout = nil
+					command.Stdout = nil
 					continue
 				}
 				fmt.Println(line)
-			case line, open := <-envCmd.Stderr:
+			case line, open := <-command.Stderr:
 				if !open {
-					envCmd.Stderr = nil
+					command.Stderr = nil
 					continue
 				}
 				fmt.Fprintln(os.Stderr, line)
@@ -42,6 +46,11 @@ func Run(args []string) {
 		}
 	}()
 
-	<-envCmd.Start()
+	<-command.Start()
 	<-doneChan
+
+	status := command.Status()
+	if status.Error != nil {
+		log.Fatal(status.Error)
+	}
 }
