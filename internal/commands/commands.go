@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"log"
+	"os"
 	"strings"
 
 	"codeberg.org/jstover/borgdrone/internal/borg"
@@ -88,7 +89,22 @@ func Create(targets []config.Target) {
 
 func ExportKey(targets []config.Target) {
 	logger.Info("Running ExportKey")
+
+	//var passwords = map[string]string{}
+	//var exported = []string{}
+
 	for _, target := range targets {
+		runner := borg.Runner{Env: target.GetEnvironment()}
+		runner.Run("key", "export", "--paper")
+
+		f, err := os.Open(target.GetPaperKeyfile())
+		if err != nil {
+			logger.Fatal(err.Error(), 3)
+		}
+		defer f.Close()
+
+		f.WriteString(strings.Join(runner.Stdout, "\n"))
+
 		logger.Info("Target = %+v", target)
 	}
 }

@@ -17,7 +17,9 @@ func assertExists() {
 }
 
 type Runner struct {
-	Env []string
+	Env    []string
+	Stdout []string
+	Stderr []string
 }
 
 func (r *Runner) Run(args ...string) {
@@ -40,6 +42,7 @@ func (r *Runner) Run(args ...string) {
 					continue
 				}
 				logger.Debug(line)
+				r.Stdout = append(r.Stdout, line)
 			case line, open := <-command.Stderr:
 				if !open {
 					command.Stderr = nil
@@ -47,6 +50,7 @@ func (r *Runner) Run(args ...string) {
 				}
 				logger.Debug(line)
 				fmt.Fprintln(os.Stderr, line)
+				r.Stderr = append(r.Stderr, line)
 			}
 		}
 	}()
@@ -58,4 +62,5 @@ func (r *Runner) Run(args ...string) {
 	if status.Error != nil {
 		logger.Fatal(status.Error.Error(), 2)
 	}
+
 }
