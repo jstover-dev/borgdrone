@@ -2,90 +2,104 @@ package commands
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"strings"
 
-	"codeberg.org/jstover/borgdrone/internal/bdTypes"
 	"codeberg.org/jstover/borgdrone/internal/borg"
 	"codeberg.org/jstover/borgdrone/internal/config"
+	"codeberg.org/jstover/borgdrone/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
 func ListTargets(cfg config.Config, format string) {
-	fmt.Println("Running ListTargets")
-	fmt.Printf("Format = %s\n", format)
-
 	switch format {
 	case "json":
 		data, err := json.MarshalIndent(cfg.TargetMap, "", "  ")
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(string(data))
+		logger.Info(string(data))
 
 	case "yaml":
 		data, err := yaml.Marshal(cfg.TargetMap)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(string(data))
+		logger.Info(string(data))
 
 	case "text":
 		for name, target := range cfg.TargetMap {
-			fmt.Println(name)
-			fmt.Printf("Include     | %s\n", strings.Join(target.Archive.Include, ", "))
+			logger.Info(name)
+			logger.Info("Include     | %s", strings.Join(target.Archive.Include, ", "))
 			if len(target.Archive.Exclude) > 0 {
-				fmt.Printf("Exclude     | %s\n", strings.Join(target.Archive.Exclude, ", "))
+				logger.Info("Exclude     | %s", strings.Join(target.Archive.Exclude, ", "))
 			}
-			fmt.Printf("Repository  | %s [%s]\n", target.StoreName, target.GetBorgRepositoryPath())
-			fmt.Println()
+			logger.Info("Repository  | %s [%s]", target.StoreName, target.GetBorgRepositoryPath())
+			logger.Info("")
 		}
 	}
 }
 
-func Initialise(cfg config.Config, targetSpec bdTypes.BorgTarget) {
-	fmt.Println("Runnning Initialise")
-	fmt.Printf("TargetSpec = %+v\n", targetSpec)
-	for _, target := range cfg.GetTargets(targetSpec) {
+func Initialise(targets []config.Target) {
+	logger.Info("Runnning Initialise")
+	for _, target := range targets {
 		if target.IsInitialised() {
-			fmt.Println(target.GetName(), "already initialised")
+			logger.Warn(target.GetName(), "already initialised")
 			continue
 		}
-		fmt.Println("Initialising", target.GetName())
+		logger.Info("Initialising " + target.GetName())
 		target.CreatePasswordFile()
-		borg.Run([]string{"init", "--encryption", target.Encryption}, target.GetEnvironment())
+		runner := borg.Runner{Env: target.GetEnvironment()}
+		runner.Run("init", "--encryption", target.Encryption)
 		target.MarkInitialised()
 	}
 }
 
-func Info(target bdTypes.BorgTarget) {
-	fmt.Println("Running Info")
-	fmt.Printf("Target = %+v\n", target)
+func Info(targets []config.Target) {
+	for _, target := range targets {
+		if !target.IsInitialised() {
+			logger.Warn("target '%s' has not been initialised", target.GetName())
+			continue
+		}
+		logger.Info("----- %s -----\n", target.GetName())
+		runner := borg.Runner{Env: target.GetEnvironment()}
+		runner.Run("info")
+	}
 }
 
-func List(target bdTypes.BorgTarget) {
-	fmt.Println("Running List")
-	fmt.Printf("Target = %+v\n", target)
+func List(targets []config.Target) {
+	for _, target := range targets {
+		if !target.IsInitialised() {
+			logger.Warn("target '%s' has not been initialised", target.GetName())
+			continue
+		}
+		logger.Info("----- %s -----", target.GetName())
+		runner := borg.Runner{Env: target.GetEnvironment()}
+		runner.Run("list")
+	}
 }
 
-func Create(target bdTypes.BorgTarget) {
-	fmt.Println("Running Create")
-	fmt.Printf("Target = %+v\n", target)
+func Create(targets []config.Target) {
+	logger.Info("Running Create")
+	for _, target := range targets {
+		logger.Info("Target = %+v", target)
+	}
 }
 
-func ExportKey(target bdTypes.BorgTarget) {
-	fmt.Println("Running ExportKey")
-	fmt.Printf("Target = %+v\n", target)
+func ExportKey(targets []config.Target) {
+	logger.Info("Running ExportKey")
+	for _, target := range targets {
+		logger.Info("Target = %+v", target)
+	}
 }
 
-func ImportKey(target bdTypes.BorgTarget, keyFile string, passwordFile string) {
-	fmt.Println("Running ImportKey")
-	fmt.Printf("Target = %+v\n", target)
-	fmt.Printf("Key File = %s\n", keyFile)
-	fmt.Printf("Password File = %s\n", passwordFile)
+func ImportKey(target config.Target, keyFile string, passwordFile string) {
+	logger.Info("Running ImportKey")
+	logger.Info("Target = %+v", target)
+	logger.Info("Key File = %s", keyFile)
+	logger.Info("Password File = %s", passwordFile)
 }
 
 func Clean() {
-	fmt.Println("Running Clean...")
+	logger.Info("Running Clean...")
 }

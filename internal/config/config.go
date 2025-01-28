@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"slices"
 
-	"codeberg.org/jstover/borgdrone/internal/bdTypes"
 	"gopkg.in/yaml.v3"
 )
 
@@ -102,14 +101,18 @@ type Config struct {
 }
 
 // GetTargets returns an array of target objects matching the provided target spec
-func (cfg Config) GetTargets(spec bdTypes.BorgTarget) []Target {
+func (cfg Config) GetTargets(archive string, store string) []Target {
 	targets := []Target{}
+
 	for _, t := range cfg.TargetMap {
-		if t.ArchiveName == spec.Archive {
-			if t.StoreName == spec.Repository || spec.Repository == "" {
+		if t.ArchiveName == archive || archive == "" {
+			if t.StoreName == store || store == "" {
 				targets = append(targets, t)
 			}
 		}
+	}
+	if len(targets) == 0 {
+		log.Fatalf("No targets were found matching %s:%s", archive, store)
 	}
 	return targets
 }
@@ -199,9 +202,9 @@ func WriteDefaultConfigFile(path string) int {
 	return n
 }
 
-// configPath is a helper function to determine the applications config+data path
+// ConfigPath is a helper function to determine the applications config+data path
 // TODO: Separate config from data as per XDG spec
-func configPath() string {
+func ConfigPath() string {
 	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfigHome == "" {
 		userHome, err := os.UserHomeDir()

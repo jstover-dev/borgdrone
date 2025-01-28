@@ -1,12 +1,13 @@
 package cmdargs
 
 import (
+	"errors"
+	"fmt"
 	"log"
-	"os"
 	"path"
 	"reflect"
+	"strings"
 
-	"codeberg.org/jstover/borgdrone/internal/bdTypes"
 	"codeberg.org/jstover/borgdrone/internal/commands"
 	"codeberg.org/jstover/borgdrone/internal/config"
 
@@ -18,6 +19,45 @@ import (
 // Subcommand-specific args are passed into the real command function by their respective implementations
 type RunnableCommand interface {
 	Run(cfg config.Config) int
+}
+
+// BorgTarget holds the ARCHIVE:REPO target specified as CLI argument
+type BorgTarget struct {
+	Archive string
+	Store   string
+}
+
+func parseBorgTarget(b []byte) (BorgTarget, error) {
+	parts := strings.Split(string(b), ":")
+	if len(parts) != 2 {
+		return BorgTarget{}, errors.New("does not match [ARCHIVE]:[STORE] format")
+	}
+	return BorgTarget{Archive: parts[0], Store: parts[1]}, nil
+}
+
+// UnmarshalText parses the ARCHIVE:REPO bytestring into BorgTarget fields
+func (t *BorgTarget) UnmarshalText(b []byte) error {
+	target, err := parseBorgTarget(b)
+	if err != nil {
+		return err
+	}
+	*t = target
+	return nil
+}
+
+// SingleBorgTarget is the same as BorgTarget except fails during Unmarshal if any field is unset
+type SingleBorgTarget BorgTarget
+
+func (t *SingleBorgTarget) UnmarshalText(b []byte) error {
+	target, err := parseBorgTarget(b)
+	if err != nil {
+		return err
+	}
+	if target.Archive == "" || target.Store == "" {
+		return errors.New(fmt.Sprintf("'%s:%s' does not match ARCHIVE:STORE format. Empty values are not allowed.", target.Archive, target.Store))
+	}
+	*t = SingleBorgTarget(target)
+	return nil
 }
 
 // list-targets
@@ -34,68 +74,74 @@ func (cmd ListTargetsCmd) Run(cfg config.Config) int {
 // initialise
 // ----------------------------------------------------------------------------
 type InitialiseCmd struct {
-	Target bdTypes.BorgTarget `arg:"required,positional"`
+	Target BorgTarget `arg:"required,positional"`
 }
 
 func (cmd InitialiseCmd) Run(cfg config.Config) int {
-	commands.Initialise(cfg, cmd.Target)
+	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
+	commands.Initialise(targets)
 	return 0
 }
 
 // info
 // ----------------------------------------------------------------------------
 type InfoCmd struct {
-	Target bdTypes.BorgTarget `arg:"required,positional"`
+	Target BorgTarget `arg:"required,positional"`
 }
 
 func (cmd InfoCmd) Run(cfg config.Config) int {
-	commands.Info(cmd.Target)
+	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
+	commands.Info(targets)
 	return 0
 }
 
 // list
 // ----------------------------------------------------------------------------
 type ListCmd struct {
-	Target bdTypes.BorgTarget `arg:"required,positional"`
+	Target BorgTarget `arg:"required,positional"`
 }
 
 func (cmd ListCmd) Run(cfg config.Config) int {
-	commands.List(cmd.Target)
+	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
+	commands.List(targets)
 	return 0
 }
 
 // create
 // ----------------------------------------------------------------------------
 type CreateCmd struct {
-	Target bdTypes.BorgTarget `arg:"required,positional"`
+	Target BorgTarget `arg:"required,positional"`
 }
 
 func (cmd CreateCmd) Run(cfg config.Config) int {
-	commands.Create(cmd.Target)
+	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
+	commands.Create(targets)
 	return 0
 }
 
 // export-key
 // ----------------------------------------------------------------------------
 type ExportKeyCmd struct {
-	Target bdTypes.BorgTarget `arg:"required,positional"`
+	Target BorgTarget `arg:"required,positional"`
 }
 
 func (cmd ExportKeyCmd) Run(cfg config.Config) int {
-	commands.ExportKey(cmd.Target)
+	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
+	commands.ExportKey(targets)
 	return 0
 }
 
 // import-key
 // ----------------------------------------------------------------------------
 type ImportKeyCmd struct {
-	Target       bdTypes.BorgTarget `arg:"required,positional"`
-	Keyfile      string             `arg:"required"`
-	PasswordFile string             `arg:"--password-file"`
+	Target       SingleBorgTarget `arg:"required,positional"`
+	Keyfile      string           `arg:"required"`
+	PasswordFile string           `arg:"--password-file"`
 }
 
 func (cmd ImportKeyCmd) Run(cfg config.Config) int {
-	commands.ImportKey(cmd.Target, cmd.Keyfile, cmd.PasswordFile)
+	target := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)[0]
+	commands.ImportKey(target, cmd.Keyfile, cmd.PasswordFile)
 	return 0
 }
 
@@ -149,11 +195,17 @@ func ParseArgs() *Arguments {
 
 	// If --config-file is not provided, set to the default location.
 	if args.ConfigFile == "" {
-		configDir, err := os.UserConfigDir()
-		if err != nil {
-			log.Fatal(err)
+		args.ConfigFile = path.Join(config.ConfigPath(), "config.yml")
+	}
+
+	// Argument Validation
+	if args.ImportKey != nil {
+		target := args.ImportKey.Target
+		if target.Archive == "" || target.Store == "" {
+			log.Fatal("Key import ")
 		}
-		args.ConfigFile = path.Join(configDir, "borgdrone", "config.yml")
+		fmt.Println("")
+
 	}
 
 	return &args

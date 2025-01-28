@@ -68,7 +68,7 @@ func (t Target) GetName() string {
 // GetConfigPath returns the base path to where all files for this target are stored
 // Currently this is $XDG_CONFIG_HOME/borg_drone/<archive>_<store>
 func (t Target) GetConfigPath() string {
-	configDir := configPath()
+	configDir := ConfigPath()
 	return path.Join(configDir, t.ArchiveName+"_"+t.StoreName)
 }
 

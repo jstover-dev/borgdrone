@@ -2,28 +2,32 @@ package borg
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 
+	"codeberg.org/jstover/borgdrone/internal/logger"
 	"github.com/go-cmd/cmd"
 )
 
 func assertExists() {
 	_, err := exec.LookPath("borg")
 	if err != nil {
-		log.Fatal("borg command was not found or is not installed.")
+		logger.Fatal("borg command was not found or is not installed.", 1)
 	}
 }
 
-func Run(args []string, env []string) {
+type Runner struct {
+	Env []string
+}
+
+func (r *Runner) Run(args ...string) {
 	assertExists()
 	cmdOptions := cmd.Options{
 		Buffered:  false,
 		Streaming: true,
 	}
 	command := cmd.NewCmdOptions(cmdOptions, "borg", args...)
-	command.Env = env
+	command.Env = r.Env
 
 	doneChan := make(chan struct{})
 	go func() {
@@ -35,12 +39,13 @@ func Run(args []string, env []string) {
 					command.Stdout = nil
 					continue
 				}
-				fmt.Println(line)
+				logger.Debug(line)
 			case line, open := <-command.Stderr:
 				if !open {
 					command.Stderr = nil
 					continue
 				}
+				logger.Debug(line)
 				fmt.Fprintln(os.Stderr, line)
 			}
 		}
@@ -51,6 +56,6 @@ func Run(args []string, env []string) {
 
 	status := command.Status()
 	if status.Error != nil {
-		log.Fatal(status.Error)
+		logger.Fatal(status.Error.Error(), 2)
 	}
 }
