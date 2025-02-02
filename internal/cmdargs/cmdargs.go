@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"path"
 	"reflect"
 	"strings"
@@ -150,7 +151,8 @@ func (cmd ImportKeyCmd) Run(cfg config.Config) int {
 type CleanCmd struct{}
 
 func (cmd CleanCmd) Run(cfg config.Config) int {
-	commands.Clean()
+	targets := cfg.GetTargets("", "")
+	commands.Clean(targets)
 	return 0
 }
 

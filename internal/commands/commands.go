@@ -2,8 +2,11 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"codeberg.org/jstover/borgdrone/internal/borg"
@@ -81,9 +84,33 @@ func List(targets []config.Target) {
 }
 
 func Create(targets []config.Target) {
+
+	expand := func(path string) string{
+		if !strings.HasPrefix(path, "~/") {
+			return path
+		}
+		dirname, _ := os.UserHomeDir()
+		return filepath.Join(dirname, path[2:])
+	}
+
 	logger.Info("Running Create")
 	for _, target := range targets {
-		logger.Info("Target = %+v", target)
+		logger.Info("----- %s -----", target.GetName())
+		argv := []string{"create", "--stats", "--compression", target.Compression}
+		if target.OneFileSystem {
+			argv = append(argv, "--one-file-system")
+		}
+		for _, p := range target.Archive.Exclude {
+			argv = append(argv, "--exclude")
+			argv = append(argv, expand(p))
+		}
+		argv = append(argv, "::{now}")
+		for _, p := range target.Archive.Include {
+			argv = append(argv, expand(p))
+		}
+		logger.Info("%+v", argv)
+		runner := borg.Runner{Env: target.GetEnvironment()}
+		runner.Run(argv...)
 	}
 }
 
@@ -116,6 +143,19 @@ func ImportKey(target config.Target, keyFile string, passwordFile string) {
 	logger.Info("Password File = %s", passwordFile)
 }
 
-func Clean() {
-	logger.Info("Running Clean...")
+func Clean(targets []config.Target) {
+	keys := []string{}
+	for _, t := range targets {
+		keys = append(keys, t.GetKeyfile())
+		keys = append(keys, t.GetPaperKeyfile())
+	}
+	var n = 0
+	for _, k := range keys {
+		err := os.Remove(k)
+		if !errors.Is(err, fs.ErrNotExist) {
+			n++
+			logger.Info("Removed %s", k)
+		}
+	}
+	logger.Info("Removed %d files", n)
 }
