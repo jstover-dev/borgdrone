@@ -5,11 +5,9 @@ import (
 
 	"codeberg.org/jstover/borgdrone/internal/cmdargs"
 	"codeberg.org/jstover/borgdrone/internal/config"
-	"codeberg.org/jstover/borgdrone/internal/logger"
 )
 
 func main() {
-	logger.Initialise()
 	args := cmdargs.ParseArgs()
 	config.WriteDefaultConfigFile(args.ConfigFile)
 

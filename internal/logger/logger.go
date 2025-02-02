@@ -53,7 +53,7 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	return &handler{handler: h.handler.WithGroup(name)}
 }
 
-func Initialise() {
+func init() {
 	h := &handler{
 		handler: slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 	}
