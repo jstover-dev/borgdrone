@@ -34,11 +34,12 @@ type ConfigYaml struct {
 	}
 
 	Targets []struct {
-		Archive      string
-		Store        string
-		Encryption   string
-		Compact      bool
-		OneFileSytem bool `yaml:"one_file_system"`
+		Archive       string
+		Store         string
+		Encryption    string
+		Compresion    string
+		Compact       bool
+		OneFileSystem bool `yaml:"one_file_system"`
 		Prune        struct {
 			KeepDaily   int `yaml:"keep_daily"`
 			KeepWeekly  int `yaml:"keep_weekly"`
@@ -57,13 +58,17 @@ func (cfg ConfigYaml) GetTarget(idx int) Target {
 		ArchiveName:      target.Archive,
 		Archive:          Archive(cfg.Archives[target.Archive]),
 		Encryption:       target.Encryption,
+		Compression:      target.Compresion,
 		Compact:          target.Compact,
-		OneFileSytem:     target.OneFileSytem,
+		OneFileSystem:     target.OneFileSystem,
 		Prune:            PruneOptions(target.Prune),
 		RcloneUploadPath: target.RcloneUploadPath,
 	}
 	if t.Encryption == "" {
 		t.Encryption = "keyfile-blake2"
+	}
+	if t.Compression == "" {
+		t.Compression = "lz4"
 	}
 
 	// Populate the appropriate Store and set StoreType

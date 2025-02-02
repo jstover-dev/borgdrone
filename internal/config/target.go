@@ -53,8 +53,9 @@ type Target struct {
 	ArchiveName      string `json:"-" yaml:"-"`
 	Archive          Archive
 	Encryption       string
+	Compression      string
 	Compact          bool
-	OneFileSytem     bool
+	OneFileSystem     bool
 	Prune            PruneOptions
 	RcloneUploadPath string `json:",omitempty" yaml:",omitempty"`
 }
