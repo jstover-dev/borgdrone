@@ -48,14 +48,15 @@ func Initialise(targets []config.Target) {
 	logger.Info("Runnning Initialise")
 	for _, target := range targets {
 		if target.IsInitialised() {
-			logger.Warn(target.GetName(), "already initialised")
+			logger.Warn("%s already initialised", target.GetName())
 			continue
 		}
 		logger.Info("Initialising " + target.GetName())
 		target.CreatePasswordFile()
 		runner := borg.Runner{Env: target.GetEnvironment()}
-		runner.Run("init", "--encryption", target.Encryption)
-		target.MarkInitialised()
+		if runner.Run("init", "--encryption", target.Encryption) {
+			target.MarkInitialised()
+		}
 	}
 }
 

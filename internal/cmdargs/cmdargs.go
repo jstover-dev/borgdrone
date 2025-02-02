@@ -187,17 +187,18 @@ func (args *Arguments) RunSubcommand(cfg config.Config) int {
 			return cmd.Run(cfg)
 		}
 	}
+
 	return 1
 }
 
 // ParseArgs is the main function used to initiate CLI argument parsing
 func ParseArgs() *Arguments {
 	var args Arguments
-	arg.MustParse(&args)
+	p := arg.MustParse(&args)
 
 	// If --config-file is not provided, set to the default location.
 	if args.ConfigFile == "" {
-		args.ConfigFile = path.Join(config.ConfigPath(), "config.yml")
+		args.ConfigFile = path.Join(config.ConfigPath(), "borgdrone.yml")
 	}
 
 	// Argument Validation
@@ -208,6 +209,11 @@ func ParseArgs() *Arguments {
 		}
 		fmt.Println("")
 
+	}
+
+	if p.Subcommand() == nil {
+		p.WriteHelp(os.Stderr)
+		os.Exit(1)
 	}
 
 	return &args

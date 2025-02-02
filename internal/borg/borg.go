@@ -22,7 +22,7 @@ type Runner struct {
 	Stderr []string
 }
 
-func (r *Runner) Run(args ...string) {
+func (r *Runner) Run(args ...string) bool {
 	assertExists()
 	cmdOptions := cmd.Options{
 		Buffered:  false,
@@ -62,5 +62,7 @@ func (r *Runner) Run(args ...string) {
 	if status.Error != nil {
 		logger.Fatal(status.Error.Error(), 2)
 	}
+
+	return status.Exit == 0
 
 }
