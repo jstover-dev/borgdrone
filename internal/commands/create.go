@@ -15,11 +15,10 @@ type CreateCmd struct {
 
 func (cmd CreateCmd) Run(cfg config.Config) int {
 	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	Create(targets)
-	return 0
+	return Create(targets)
 }
 
-func Create(targets []config.Target) {
+func Create(targets []config.Target) int {
 
 	expand := func(path string) string {
 		if !strings.HasPrefix(path, "~/") {
@@ -47,4 +46,5 @@ func Create(targets []config.Target) {
 		logger.Info("%+v", argv)
 		target.ExecBorg(argv...)
 	}
+	return 0
 }

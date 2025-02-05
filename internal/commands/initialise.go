@@ -11,11 +11,10 @@ type InitialiseCmd struct {
 
 func (cmd InitialiseCmd) Run(cfg config.Config) int {
 	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	Initialise(targets)
-	return 0
+	return Initialise(targets)
 }
 
-func Initialise(targets []config.Target) {
+func Initialise(targets []config.Target) int {
 	logger.Info("Runnning Initialise")
 	for _, target := range targets {
 		if target.IsInitialised() {
@@ -28,4 +27,5 @@ func Initialise(targets []config.Target) {
 			target.MarkInitialised()
 		}
 	}
+	return 0
 }

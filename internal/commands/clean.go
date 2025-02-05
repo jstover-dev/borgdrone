@@ -13,11 +13,10 @@ type CleanCmd struct{}
 
 func (cmd CleanCmd) Run(cfg config.Config) int {
 	targets := cfg.GetTargets("", "")
-	Clean(targets)
-	return 0
+	return Clean(targets)
 }
 
-func Clean(targets []config.Target) {
+func Clean(targets []config.Target) int {
 	keys := []string{}
 	for _, t := range targets {
 		keys = append(keys, t.Keyfile())
@@ -32,4 +31,5 @@ func Clean(targets []config.Target) {
 		}
 	}
 	logger.Info("%d files removed", n)
+	return 0
 }

@@ -11,11 +11,10 @@ type InfoCmd struct {
 
 func (cmd InfoCmd) Run(cfg config.Config) int {
 	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	Info(targets)
-	return 0
+	return Info(targets)
 }
 
-func Info(targets []config.Target) {
+func Info(targets []config.Target) int {
 	for _, target := range targets {
 		if !target.IsInitialised() {
 			logger.Warn("target '%s' has not been initialised", target.Name())
@@ -24,4 +23,5 @@ func Info(targets []config.Target) {
 		logger.Info("----- %s -----\n", target.Name())
 		target.ExecBorg("info")
 	}
+	return 0
 }

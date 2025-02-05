@@ -15,11 +15,10 @@ type ListTargetsCmd struct {
 }
 
 func (cmd ListTargetsCmd) Run(cfg config.Config) int {
-	ListTargets(cfg, cmd.Format)
-	return 0
+	return ListTargets(cfg, cmd.Format)
 }
 
-func ListTargets(cfg config.Config, format string) {
+func ListTargets(cfg config.Config, format string) int {
 	switch format {
 	case "json":
 		data, err := json.MarshalIndent(cfg.TargetMap, "", "  ")
@@ -46,4 +45,5 @@ func ListTargets(cfg config.Config, format string) {
 			logger.Info("")
 		}
 	}
+	return 0
 }

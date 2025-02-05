@@ -15,11 +15,10 @@ type ExportKeyCmd struct {
 
 func (cmd ExportKeyCmd) Run(cfg config.Config) int {
 	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	ExportKey(targets)
-	return 0
+	return ExportKey(targets)
 }
 
-func ExportKey(targets []config.Target) {
+func ExportKey(targets []config.Target) int {
 	passwords := make(map[string]string)
 	exported := []string{}
 
@@ -66,4 +65,5 @@ func ExportKey(targets []config.Target) {
 		}
 	}
 	logger.Info("")
+	return 0
 }
