@@ -42,7 +42,7 @@ func ListTargets(cfg config.Config, format string) {
 			if len(target.Archive.Exclude) > 0 {
 				logger.Info("Exclude     | %s", strings.Join(target.Archive.Exclude, ", "))
 			}
-			logger.Info("Repository  | %s [%s]", target.StoreName, target.GetBorgRepositoryPath())
+			logger.Info("Repository  | %s [%s]", target.StoreName, target.BorgRepositoryPath())
 			logger.Info("")
 		}
 	}

@@ -16,49 +16,41 @@ func assertExists() {
 	}
 }
 
-type Runner struct {
-	Env    []string
-	Stdout []string
-	Stderr []string
-}
-
-func (r *Runner) Run(args ...string) bool {
+func Run(env []string, args ...string) bool {
 	assertExists()
-	cmdOptions := cmd.Options{
+	opts := cmd.Options{
 		Buffered:  false,
 		Streaming: true,
 	}
-	command := cmd.NewCmdOptions(cmdOptions, "borg", args...)
-	command.Env = r.Env
+	c := cmd.NewCmdOptions(opts, "borg", args...)
+	c.Env = env
 
 	doneChan := make(chan struct{})
 	go func() {
 		defer close(doneChan)
-		for command.Stdout != nil || command.Stderr != nil {
+		for c.Stdout != nil || c.Stderr != nil {
 			select {
-			case line, open := <-command.Stdout:
+			case line, open := <-c.Stdout:
 				if !open {
-					command.Stdout = nil
+					c.Stdout = nil
 					continue
 				}
 				logger.Debug(line)
-				r.Stdout = append(r.Stdout, line)
-			case line, open := <-command.Stderr:
+			case line, open := <-c.Stderr:
 				if !open {
-					command.Stderr = nil
+					c.Stderr = nil
 					continue
 				}
 				logger.Debug(line)
 				fmt.Fprintln(os.Stderr, line)
-				r.Stderr = append(r.Stderr, line)
 			}
 		}
 	}()
 
-	<-command.Start()
+	<-c.Start()
 	<-doneChan
 
-	status := command.Status()
+	status := c.Status()
 	if status.Error != nil {
 		logger.Fatal(status.Error.Error(), 2)
 	}

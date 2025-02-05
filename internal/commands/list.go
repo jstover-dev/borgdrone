@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"codeberg.org/jstover/borgdrone/internal/borg"
 	"codeberg.org/jstover/borgdrone/internal/config"
 	"codeberg.org/jstover/borgdrone/internal/logger"
 )
@@ -19,11 +18,10 @@ func (cmd ListCmd) Run(cfg config.Config) int {
 func List(targets []config.Target) {
 	for _, target := range targets {
 		if !target.IsInitialised() {
-			logger.Warn("target '%s' has not been initialised", target.GetName())
+			logger.Warn("target '%s' has not been initialised", target.Name())
 			continue
 		}
-		logger.Info("----- %s -----", target.GetName())
-		runner := borg.Runner{Env: target.GetEnvironment()}
-		runner.Run("list")
+		logger.Info("----- %s -----", target.Name())
+		target.ExecBorg("list")
 	}
 }

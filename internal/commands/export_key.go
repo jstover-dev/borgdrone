@@ -5,7 +5,6 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"codeberg.org/jstover/borgdrone/internal/borg"
 	"codeberg.org/jstover/borgdrone/internal/config"
 	"codeberg.org/jstover/borgdrone/internal/logger"
 )
@@ -26,28 +25,27 @@ func ExportKey(targets []config.Target) {
 
 	for _, target := range targets {
 		if !target.IsInitialised() {
-			logger.Warn("target '%s' has not been initialised", target.GetName())
+			logger.Warn("target '%s' has not been initialised", target.Name())
 			continue
 		}
 
-		key := target.GetKeyfile()
-		pkey := target.GetPaperKeyfile()
+		key := target.Keyfile()
+		pkey := target.PaperKeyfile()
 
-		runner := borg.Runner{Env: target.GetEnvironment()}
-		runner.Run("key", "export", "--paper", "::", pkey)
+		target.ExecBorg("key", "export", "--paper", "::", pkey)
 		logger.Debug("Exported %s", pkey)
 
-		runner.Run("key", "export", "::", pkey)
+		target.ExecBorg("key", "export", "::", pkey)
 		logger.Debug("Exported %s", pkey)
 
-		pw, err := os.ReadFile(target.GetPasswordFile())
+		pw, err := os.ReadFile(target.PasswordFile())
 		if err != nil {
 			logger.Fatal(err.Error(), 3)
 		}
 
 		exported = append(exported, key)
 		exported = append(exported, pkey)
-		passwords[target.GetName()] = string(pw)
+		passwords[target.Name()] = string(pw)
 	}
 
 	if len(passwords) > 0 {

@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"reflect"
@@ -103,15 +102,6 @@ func ParseArgs() *Arguments {
 	// If --config-file is not provided, set to the default location.
 	if args.ConfigFile == "" {
 		args.ConfigFile = path.Join(config.ConfigPath(), "borgdrone.yml")
-	}
-
-	// Argument Validation
-	if args.ImportKey != nil {
-		target := args.ImportKey.Target
-		if target.Archive == "" || target.Store == "" {
-			log.Fatal("Key import ")
-		}
-		fmt.Println("")
 	}
 
 	if p.Subcommand() == nil {

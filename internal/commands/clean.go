@@ -20,8 +20,8 @@ func (cmd CleanCmd) Run(cfg config.Config) int {
 func Clean(targets []config.Target) {
 	keys := []string{}
 	for _, t := range targets {
-		keys = append(keys, t.GetKeyfile())
-		keys = append(keys, t.GetPaperKeyfile())
+		keys = append(keys, t.Keyfile())
+		keys = append(keys, t.PaperKeyfile())
 	}
 	var n = 0
 	for _, k := range keys {

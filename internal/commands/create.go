@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"codeberg.org/jstover/borgdrone/internal/borg"
 	"codeberg.org/jstover/borgdrone/internal/config"
 	"codeberg.org/jstover/borgdrone/internal/logger"
 )
@@ -32,7 +31,7 @@ func Create(targets []config.Target) {
 
 	logger.Info("Running Create")
 	for _, target := range targets {
-		logger.Info("----- %s -----", target.GetName())
+		logger.Info("----- %s -----", target.Name())
 		argv := []string{"create", "--stats", "--compression", target.Compression}
 		if target.OneFileSystem {
 			argv = append(argv, "--one-file-system")
@@ -46,7 +45,6 @@ func Create(targets []config.Target) {
 			argv = append(argv, expand(p))
 		}
 		logger.Info("%+v", argv)
-		runner := borg.Runner{Env: target.GetEnvironment()}
-		runner.Run(argv...)
+		target.ExecBorg(argv...)
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"codeberg.org/jstover/borgdrone/internal/borg"
 )
 
 type StoreType string
@@ -55,52 +57,70 @@ type Target struct {
 	Encryption       string
 	Compression      string
 	Compact          bool
-	OneFileSystem     bool
+	OneFileSystem    bool
 	Prune            PruneOptions
 	RcloneUploadPath string `json:",omitempty" yaml:",omitempty"`
 }
 
-// GetName Returns a human-readable label for this target
+func (t Target) SetDefaults() {
+	if t.Encryption == "" {
+		t.Encryption = "keyfile-blake2"
+	}
+	if t.Compression == "" {
+		t.Compression = "lz4"
+	}
+	if t.Store.SSH != nil {
+		if t.Store.SSH.Port == 0 {
+			t.Store.SSH.Port = 22
+		}
+	}
+	// Ensure uninitialised slices are not nil. Workaround for json serialising empty slices as null
+	if len(t.Archive.Include) == 0 {
+		t.Archive.Include = []string{}
+	}
+	if len(t.Archive.Exclude) == 0 {
+		t.Archive.Exclude = []string{}
+	}
+}
+
+// Name Returns a human-readable label for this target
 // ARCHIVE:STORE format mirrors the CLI format for speciying targets
-func (t Target) GetName() string {
+func (t Target) Name() string {
 	return t.ArchiveName + ":" + t.StoreName
 }
 
-// GetConfigPath returns the base path to where all files for this target are stored
+// configPath returns the base path to where all files for this target are stored
 // Currently this is $XDG_CONFIG_HOME/borg_drone/<archive>_<store>
-func (t Target) GetConfigPath() string {
+func (t Target) configPath() string {
 	configDir := ConfigPath()
 	return path.Join(configDir, t.ArchiveName+"_"+t.StoreName)
 }
 
-// GetPasswordFile returns the path to the file containing the borg repository password
-func (t Target) GetPasswordFile() string {
-	return path.Join(t.GetConfigPath(), "passwd")
+// PasswordFile returns the path to the file containing the borg repository password
+func (t Target) PasswordFile() string {
+	return path.Join(t.configPath(), "passwd")
 }
 
-// GetKeyfile returns the path to the (binary) keyfile
-func (t Target) GetKeyfile() string {
-	return path.Join(t.GetConfigPath(), "keyfile.bin")
+// Keyfile returns the path to the (binary) keyfile
+func (t Target) Keyfile() string {
+	return path.Join(t.configPath(), "keyfile.bin")
 }
 
-// GetPaperKeyfile returns the path to the "paper" (text) keyfile
-func (t Target) GetPaperKeyfile() string {
-	return path.Join(t.GetConfigPath(), "keyfile.txt")
+// PaperKeyfile returns the path to the "paper" (text) keyfile
+func (t Target) PaperKeyfile() string {
+	return path.Join(t.configPath(), "keyfile.txt")
 }
 
 // IsInitialised will return true if this target has already been initialised (keys/passwords are generated)
 func (t Target) IsInitialised() bool {
-	if _, err := os.Stat(path.Join(t.GetConfigPath(), ".initialised")); err == nil {
-		return true
-	} else {
-		return false
-	}
+	_, err := os.Stat(path.Join(t.configPath(), ".initialised"))
+	return err == nil
 }
 
-// GetBorgRepositoryPath returns a repo path usable by Borg
+// BorgRepositoryPath returns a repo path usable by Borg
 // For Local filesystem targets, this is just a path
 // For SSH targets, this is an ssh:// URL
-func (t Target) GetBorgRepositoryPath() string {
+func (t Target) BorgRepositoryPath() string {
 	switch t.StoreType {
 
 	case LocalStore:
@@ -129,28 +149,10 @@ func (t Target) GetBorgRepositoryPath() string {
 	}
 }
 
-// GetEnvironment
-func (t Target) GetEnvironment() []string {
-	e := []string{
-		"BORG_RELOCATED_REPO_ACCESS_IS_OK=yes",
-	}
-	e = append(e, fmt.Sprintf("BORG_PASSCOMMAND=cat %s", t.GetPasswordFile()))
-	e = append(e, fmt.Sprintf("BORG_REPO=%s", t.GetBorgRepositoryPath()))
-
-	if t.StoreType == SSHStore {
-		rshOptions := []string{"-o VisualHostKey=no"}
-		if t.Store.SSH.SshKey != "" {
-			rshOptions = append(rshOptions, "-i "+t.Store.SSH.SshKey)
-		}
-		e = append(e, fmt.Sprintf("BORG_RSH=ssh %s", strings.Join(rshOptions, " ")))
-	}
-	return e
-}
-
 // CreatePasswordFile
 func (t Target) CreatePasswordFile() {
-	os.MkdirAll(t.GetConfigPath(), 0700)
-	file, err := os.OpenFile(t.GetPasswordFile(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	os.MkdirAll(t.configPath(), 0700)
+	file, err := os.OpenFile(t.PasswordFile(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if errors.Is(err, os.ErrExist) {
 		return
 	} else if err != nil {
@@ -163,13 +165,32 @@ func (t Target) CreatePasswordFile() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Created " + t.GetPasswordFile())
+	fmt.Println("Created " + t.PasswordFile())
 }
 
 // MarkInitialised
 func (t Target) MarkInitialised() {
-	_, err := os.Create(path.Join(t.GetConfigPath(), ".initialised"))
+	_, err := os.Create(path.Join(t.configPath(), ".initialised"))
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// Run executes a borg command against the current target repository
+func (t Target) ExecBorg(args ...string) bool {
+	env := []string{
+		"BORG_RELOCATED_REPO_ACCESS_IS_OK=yes",
+	}
+	env = append(env, fmt.Sprintf("BORG_PASSCOMMAND=cat %s", t.PasswordFile()))
+	env = append(env, fmt.Sprintf("BORG_REPO=%s", t.BorgRepositoryPath()))
+
+	if t.StoreType == SSHStore {
+		rshOptions := []string{"-o VisualHostKey=no"}
+		if t.Store.SSH.SshKey != "" {
+			rshOptions = append(rshOptions, "-i "+t.Store.SSH.SshKey)
+		}
+		env = append(env, fmt.Sprintf("BORG_RSH=ssh %s", strings.Join(rshOptions, " ")))
+	}
+
+	return borg.Run(env, args...)
 }

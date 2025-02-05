@@ -64,13 +64,6 @@ func (cfg ConfigYaml) GetTarget(idx int) Target {
 		Prune:            PruneOptions(target.Prune),
 		RcloneUploadPath: target.RcloneUploadPath,
 	}
-	if t.Encryption == "" {
-		t.Encryption = "keyfile-blake2"
-	}
-	if t.Compression == "" {
-		t.Compression = "lz4"
-	}
-
 	// Populate the appropriate Store and set StoreType
 	if store, ok := cfg.Stores.Filesystem[t.StoreName]; ok {
 		t.StoreType = LocalStore
@@ -83,19 +76,8 @@ func (cfg ConfigYaml) GetTarget(idx int) Target {
 			Port:     store.Port,
 			SshKey:   store.SshKey,
 		}
-		if t.Store.SSH.Port == 0 {
-			t.Store.SSH.Port = 22
-		}
 	}
-
-	// Ensure uninitialised slices are not nil. Workaround for json serialising empty slices as null
-	if len(t.Archive.Include) == 0 {
-		t.Archive.Include = []string{}
-	}
-	if len(t.Archive.Exclude) == 0 {
-		t.Archive.Exclude = []string{}
-	}
-
+	t.SetDefaults()
 	return t
 }
 
@@ -182,25 +164,24 @@ func ReadConfigFile(path string) (Config, error) {
 	targets := make(map[string]Target)
 	for idx := range cfg.Targets {
 		t := cfg.GetTarget(idx)
-		targets[t.GetName()] = t
+		targets[t.Name()] = t
 	}
 
 	return Config{TargetMap: targets}, nil
 }
 
 func WriteDefaultConfigFile(path string) int {
-
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
 		log.Fatal(err)
 	}
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if errors.Is(err, os.ErrExist) {
 		return 0
 	} else if err != nil {
 		log.Fatal(err)
 	}
-	n, err := file.Write(defaultConfigData)
+	n, err := f.Write(defaultConfigData)
 	if err != nil {
 		log.Fatal(err)
 	}
