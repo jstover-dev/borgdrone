@@ -40,7 +40,7 @@ type ConfigYaml struct {
 		Compresion    string
 		Compact       bool
 		OneFileSystem bool `yaml:"one_file_system"`
-		Prune        struct {
+		Prune         struct {
 			KeepDaily   int `yaml:"keep_daily"`
 			KeepWeekly  int `yaml:"keep_weekly"`
 			KeepMonthly int `yaml:"keep_monthly"`
@@ -60,7 +60,7 @@ func (cfg ConfigYaml) GetTarget(idx int) Target {
 		Encryption:       target.Encryption,
 		Compression:      target.Compresion,
 		Compact:          target.Compact,
-		OneFileSystem:     target.OneFileSystem,
+		OneFileSystem:    target.OneFileSystem,
 		Prune:            PruneOptions(target.Prune),
 		RcloneUploadPath: target.RcloneUploadPath,
 	}

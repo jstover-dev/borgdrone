@@ -1,19 +1,18 @@
 package main
 
 import (
-	"log"
-
-	"codeberg.org/jstover/borgdrone/internal/cmdargs"
+	"codeberg.org/jstover/borgdrone/internal/commands"
 	"codeberg.org/jstover/borgdrone/internal/config"
+	"codeberg.org/jstover/borgdrone/internal/logger"
 )
 
 func main() {
-	args := cmdargs.ParseArgs()
+	args := commands.ParseArgs()
 	config.WriteDefaultConfigFile(args.ConfigFile)
 
 	cfg, err := config.ReadConfigFile(args.ConfigFile)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err.Error(), 1)
 	}
 
 	args.RunSubcommand(cfg)

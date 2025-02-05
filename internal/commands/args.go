@@ -1,4 +1,4 @@
-package cmdargs
+package commands
 
 import (
 	"errors"
@@ -9,9 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"codeberg.org/jstover/borgdrone/internal/commands"
 	"codeberg.org/jstover/borgdrone/internal/config"
-
 	"github.com/alexflint/go-arg"
 )
 
@@ -46,7 +44,8 @@ func (t *BorgTarget) UnmarshalText(b []byte) error {
 	return nil
 }
 
-// SingleBorgTarget is the same as BorgTarget except fails during Unmarshal if any field is unset
+// SingleBorgTarget is the same as BorgTarget except fails during Unmarshal if any field is unset.
+// It therefore must represent exactly one target
 type SingleBorgTarget BorgTarget
 
 func (t *SingleBorgTarget) UnmarshalText(b []byte) error {
@@ -59,101 +58,6 @@ func (t *SingleBorgTarget) UnmarshalText(b []byte) error {
 	}
 	*t = SingleBorgTarget(target)
 	return nil
-}
-
-// list-targets
-// ----------------------------------------------------------------------------
-type ListTargetsCmd struct {
-	Format string `arg:"-F,--format" default:"text"`
-}
-
-func (cmd ListTargetsCmd) Run(cfg config.Config) int {
-	commands.ListTargets(cfg, cmd.Format)
-	return 0
-}
-
-// initialise
-// ----------------------------------------------------------------------------
-type InitialiseCmd struct {
-	Target BorgTarget `arg:"required,positional"`
-}
-
-func (cmd InitialiseCmd) Run(cfg config.Config) int {
-	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	commands.Initialise(targets)
-	return 0
-}
-
-// info
-// ----------------------------------------------------------------------------
-type InfoCmd struct {
-	Target BorgTarget `arg:"required,positional"`
-}
-
-func (cmd InfoCmd) Run(cfg config.Config) int {
-	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	commands.Info(targets)
-	return 0
-}
-
-// list
-// ----------------------------------------------------------------------------
-type ListCmd struct {
-	Target BorgTarget `arg:"required,positional"`
-}
-
-func (cmd ListCmd) Run(cfg config.Config) int {
-	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	commands.List(targets)
-	return 0
-}
-
-// create
-// ----------------------------------------------------------------------------
-type CreateCmd struct {
-	Target BorgTarget `arg:"required,positional"`
-}
-
-func (cmd CreateCmd) Run(cfg config.Config) int {
-	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	commands.Create(targets)
-	return 0
-}
-
-// export-key
-// ----------------------------------------------------------------------------
-type ExportKeyCmd struct {
-	Target BorgTarget `arg:"required,positional"`
-}
-
-func (cmd ExportKeyCmd) Run(cfg config.Config) int {
-	targets := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)
-	commands.ExportKey(targets)
-	return 0
-}
-
-// import-key
-// ----------------------------------------------------------------------------
-type ImportKeyCmd struct {
-	Target       SingleBorgTarget `arg:"required,positional"`
-	Keyfile      string           `arg:"required"`
-	PasswordFile string           `arg:"--password-file"`
-}
-
-func (cmd ImportKeyCmd) Run(cfg config.Config) int {
-	target := cfg.GetTargets(cmd.Target.Archive, cmd.Target.Store)[0]
-	commands.ImportKey(target, cmd.Keyfile, cmd.PasswordFile)
-	return 0
-}
-
-// clean
-// ----------------------------------------------------------------------------
-type CleanCmd struct{}
-
-func (cmd CleanCmd) Run(cfg config.Config) int {
-	targets := cfg.GetTargets("", "")
-	commands.Clean(targets)
-	return 0
 }
 
 // Arguments struct defines the CLI Interface
@@ -208,7 +112,6 @@ func ParseArgs() *Arguments {
 			log.Fatal("Key import ")
 		}
 		fmt.Println("")
-
 	}
 
 	if p.Subcommand() == nil {
