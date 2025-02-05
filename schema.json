@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/ConfigYaml",
+  "$defs": {
+    "ConfigYaml": {
+      "properties": {
+        "stores": {
+          "properties": {
+            "filesystem": {
+              "additionalProperties": { "type": "string" },
+              "type": "object"
+            },
+            "ssh": {
+              "additionalProperties": {
+                "properties": {
+                  "hostname": { "type": "string" },
+                  "username": { "type": "string" },
+                  "port": { "type": "integer" },
+                  "path": { "type": "string" },
+                  "ssh_key": { "type": "string" }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": ["hostname"]
+              },
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": ["filesystem", "ssh"]
+        },
+        "archives": {
+          "additionalProperties": {
+            "properties": {
+              "include": { "items": { "type": "string" }, "type": "array" },
+              "exclude": { "items": { "type": "string" }, "type": "array" }
+            },
+            "additionalProperties": false,
+            "type": "object",
+            "required": ["include", "exclude"]
+          },
+          "type": "object"
+        },
+        "targets": {
+          "items": {
+            "properties": {
+              "archive": { "type": "string" },
+              "store": { "type": "string" },
+              "encryption": { "type": "string" },
+              "compact": { "type": "boolean" },
+              "one_file_system": { "type": "boolean" },
+              "prune": {
+                "properties": {
+                  "keep_daily": { "type": "integer" },
+                  "keep_weekly": { "type": "integer" },
+                  "keep_monthly": { "type": "integer" },
+                  "keep_yearly": { "type": "integer" }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "keep_daily",
+                  "keep_weekly",
+                  "keep_monthly",
+                  "keep_yearly"
+                ]
+              },
+              "rclone_upload_path": { "type": "string" }
+            },
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "archive",
+              "store",
+              "encryption"
+            ]
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": ["stores", "archives", "targets"]
+    }
+  }
+}

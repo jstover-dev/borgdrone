@@ -43,7 +43,7 @@ targets:
     rclone_upload_path: 'b2-borg-archives:'
 
   - archive: laptop
-    repository: backup_usb
+    store: backup_usb
     encryption: keyfile-blake2
     prune:
       keep_daily: 7
