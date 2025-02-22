@@ -14,11 +14,20 @@ type ListTargetsCmd struct {
 	Format string `arg:"-F,--format" default:"text"`
 }
 
-func (cmd ListTargetsCmd) Run(cfg config.Config) int {
-	return ListTargets(cfg, cmd.Format)
+type ListTargetArgs struct {
+	cfg config.Config
+	fmt string
 }
 
-func ListTargets(cfg config.Config, format string) int {
+func (cmd ListTargetsCmd) Run(cfg config.Config) int {
+	return ListTargets(ListTargetArgs{cfg: cfg, fmt: cmd.Format})
+}
+
+func ListTargets(args ListTargetArgs) int {
+
+	cfg := args.cfg
+	format := args.fmt
+
 	switch format {
 	case "json":
 		data, err := json.MarshalIndent(cfg.TargetMap, "", "  ")

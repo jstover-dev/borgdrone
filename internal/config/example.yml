@@ -1,0 +1,80 @@
+# Stores define the available borg repository locations.
+# Each store can either be a filesystem path or an SSH connection
+# Store names are referenced later on in the targets section
+stores:
+
+  # filesystem is a map containing local directory paths
+  filesystem:
+    backup_local: /backup/local
+    backup_usb: /backup/usb
+
+  # ssh is a map containing SSH connection information
+  ssh:
+    example1:
+      hostname: host1.example.com
+      username: username
+      port: 22
+      ssh_key: ~/.ssh/example
+
+    example2:
+      hostname: host2.example.com
+      username: lucy
+      ssh_key: ~/.ssh/lucy@host2
+
+# Archives define the file paths that will be backed up to a borg repository
+# Archive names are referenced later on in the targets section
+# These paths are passed
+archives:
+  laptop:
+
+    # Local paths to include in the archive.
+    # tilde (~) will expanded to the current users home directory
+    include:
+      - ~/Desktop
+      - ~/Documents
+      - ~/Pictures
+      - ~/bin
+      - ~/src
+    # Exclude paths. These are passed directly into 'borg create'
+    # See https://borgbackup.readthedocs.io/en/stable/usage/help.html#borg-patterns
+    exclude:
+      - "**/venv"
+      - "**/node_modules"
+
+  desktop:
+    include:
+      - /home
+
+# Targets define the configuration for a single run of borg.
+# Each target must include a reference to a Store and an Archive
+# Additional settings are also defined here. Most will be passed along to borg
+# For more information, please read the following borg documentation:
+#  https://borgbackup.readthedocs.io/en/stable/usage/init.html#encryption-mode-tldr
+#  https://borgbackup.readthedocs.io/en/stable/usage/prune.html
+#  https://borgbackup.readthedocs.io/en/stable/usage/compact.html
+targets:
+
+  - archive: laptop             # The name of a previously defined Archive
+    store: backup_local         # The name of a previously defined Store
+    encryption: keyfile-blake2  # Borg encryption method
+    prune:                      # Borg Prune options
+      keep_daily: 1
+      keep_weekly: 1
+      keep_monthly: 1
+      keep_yearly: 1
+    compact: true               # If true, 'borg compact' after creating a backup
+    rclone_upload_path: 'b2:'   # If set, rclone will be used to upload the entire borg repository to this location.
+
+  - archive: desktop
+    store: backup_usb
+    encryption: keyfile-blake2
+    prune:
+      keep_daily: 7
+      keep_weekly: 3
+      keep_monthly: 6
+      keep_yearly: 2
+    compact: true
+
+  - archive: desktop
+    store: example2
+    compact: true

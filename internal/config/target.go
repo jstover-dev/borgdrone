@@ -168,6 +168,8 @@ func (t Target) CreatePasswordFile() {
 	fmt.Println("Created " + t.PasswordFile())
 }
 
+var borgRunner = borg.NewRunner()
+
 // MarkInitialised
 func (t Target) MarkInitialised() {
 	_, err := os.Create(path.Join(t.configPath(), ".initialised"))
@@ -192,5 +194,6 @@ func (t Target) ExecBorg(args ...string) bool {
 		env = append(env, fmt.Sprintf("BORG_RSH=ssh %s", strings.Join(rshOptions, " ")))
 	}
 
-	return borg.Run(env, args...)
+	return borgRunner.Run(env, args...)
+	//return borg.Run(env, args...)
 }

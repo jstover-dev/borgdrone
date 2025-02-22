@@ -8,7 +8,7 @@ import (
 
 func main() {
 	args := commands.ParseArgs()
-	config.WriteDefaultConfigFile(args.ConfigFile)
+	//config.WriteDefaultConfigFile(args.ConfigFile)
 
 	cfg, err := config.ReadConfigFile(args.ConfigFile)
 	if err != nil {

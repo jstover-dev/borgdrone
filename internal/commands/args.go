@@ -61,14 +61,15 @@ func (t *SingleBorgTarget) UnmarshalText(b []byte) error {
 
 // Arguments struct defines the CLI Interface
 type Arguments struct {
-	ListTargets *ListTargetsCmd `arg:"subcommand:list-targets"`
-	Initialise  *InitialiseCmd  `arg:"subcommand:init"`
-	Info        *InfoCmd        `arg:"subcommand:info"`
-	List        *ListCmd        `arg:"subcommand:list"`
-	Create      *CreateCmd      `arg:"subcommand:create"`
-	ExportKey   *ExportKeyCmd   `arg:"subcommand:export-key"`
-	ImportKey   *ImportKeyCmd   `arg:"subcommand:import-key"`
-	Clean       *CleanCmd       `arg:"subcommand:clean"`
+	ExampleConfig *ExampleConfigCmd `arg:"subcommand:example-config"`
+	ListTargets   *ListTargetsCmd   `arg:"subcommand:list-targets"`
+	Initialise    *InitialiseCmd    `arg:"subcommand:init"`
+	Info          *InfoCmd          `arg:"subcommand:info"`
+	List          *ListCmd          `arg:"subcommand:list"`
+	Create        *CreateCmd        `arg:"subcommand:create"`
+	ExportKey     *ExportKeyCmd     `arg:"subcommand:export-key"`
+	ImportKey     *ImportKeyCmd     `arg:"subcommand:import-key"`
+	Clean         *CleanCmd         `arg:"subcommand:clean"`
 
 	ConfigFile string `arg:"-c,--config-file"`
 }
@@ -76,6 +77,7 @@ type Arguments struct {
 // RunSubCommand method finds the CLI subcommand specified and calls it's Run() method
 func (args *Arguments) RunSubcommand(cfg config.Config) int {
 	subCommands := []RunnableCommand{
+		args.ExampleConfig,
 		args.ListTargets,
 		args.Initialise,
 		args.Info,

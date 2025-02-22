@@ -84,7 +84,8 @@ func (cfg ConfigYaml) GetTarget(idx int) Target {
 // Config is the main configuration struct which is passed into subcommands
 // Currently only contains the map of valid targets, but could be used for global program configuration
 type Config struct {
-	TargetMap map[string]Target
+	ConfigFile string
+	TargetMap  map[string]Target
 }
 
 // GetTargets returns an array of target objects matching the provided target spec
@@ -104,10 +105,14 @@ func (cfg Config) GetTargets(archive string, store string) []Target {
 	return targets
 }
 
-//go:embed default.yml
-var defaultConfigData []byte
+//go:embed example.yml
+var ExampleConf []byte
+
+//go:embed minimal.yml
+var MinimalConf []byte
 
 func ReadConfigFile(path string) (Config, error) {
+	writeMinimalConf(path)
 	var cfg ConfigYaml
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -167,10 +172,13 @@ func ReadConfigFile(path string) (Config, error) {
 		targets[t.Name()] = t
 	}
 
-	return Config{TargetMap: targets}, nil
+	return Config{
+		ConfigFile: path,
+		TargetMap:  targets,
+	}, nil
 }
 
-func WriteDefaultConfigFile(path string) int {
+func writeMinimalConf(path string) int {
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil {
 		log.Fatal(err)
@@ -181,7 +189,7 @@ func WriteDefaultConfigFile(path string) int {
 	} else if err != nil {
 		log.Fatal(err)
 	}
-	n, err := f.Write(defaultConfigData)
+	n, err := f.Write(MinimalConf)
 	if err != nil {
 		log.Fatal(err)
 	}
